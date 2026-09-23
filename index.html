@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Выборы президента группы "Турники"</title>
+<style>
+  /* ===== ПЕРЕМЕННЫЕ ТЕМЫ ===== */
+  :root {
+    --bg: #0e1117;
+    --bg-card: #171b26;
+    --bg-card-hover: #1e2330;
+    --border: #2a2f3d;
+    --text: #f2f4f8;
+    --text-dim: #9aa3b5;
+    --green: #3ddc84;
+    --orange: #ff9f45;
+    --blue: #4d9fff;
+    --danger: #ff5c5c;
+    --shadow: rgba(0, 0, 0, 0.4);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: radial-gradient(circle at top, #131722, #0a0c11 70%);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+    padding: 24px 16px 80px;
+    overflow-x: hidden;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  /* ===== ШАПКА ===== */
+  header {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+
+  h1 {
+    font-size: clamp(1.6rem, 5vw, 2.4rem);
+    background: linear-gradient(90deg, var(--green), var(--blue));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    color: var(--text-dim);
+    font-size: clamp(0.95rem, 3vw, 1.15rem);
+  }
+
+  /* ===== ТАЙМЕР ===== */
+  .timer-box {
+    margin: 20px auto;
+    max-width: 460px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 14px 18px;
+    text-align: center;
+  }
+
+  .timer-label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+
+  .timer-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--orange);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .timer-value.ended { color: var(--danger); }
+
+  /* ===== КАРТОЧКИ КАНДИДАТОВ ===== */
+  .candidates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin: 28px 0;
+  }
+
+  .candidate-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 22px 16px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    position: relative;
+  }
+
+  .candidate-card:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 12px 24px var(--shadow);
+    border-color: var(--card-color, var(--green));
+    background: var(--bg-card-hover);
+  }
+
+  .candidate-card.selected {
+    border-color: var(--card-color, var(--green));
+    box-shadow: 0 0 0 2px var(--card-color, var(--green)), 0 12px 24px var(--shadow);
+    background: var(--bg-card-hover);
+  }
+
+  .candidate-card.selected::after {
+    content: "✓";
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    color: var(--card-color, var(--green));
+    font-weight: 900;
+    font-size: 1.2rem;
+  }
+
+  .avatar {
+    font-size: 3rem;
+    width: 84px;
+    height: 84px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at 30% 30%, var(--card-color, var(--green)) 0%, transparent 70%);
+    border-radius: 50%;
+    border: 2px solid var(--card-color, var(--green));
+    transition: transform 0.3s ease;
+  }
+
+  .candidate-card:hover .avatar {
+    transform: rotate(-6deg) scale(1.08);
+  }
+
+  .candidate-name {
+    font-size: 1.15rem;
+    font-weight: 700;
+  }
+
+  .vote-btn {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: none;
+    background: var(--card-color, var(--green));
+    color: #0a0c11;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: filter 0.2s ease, transform 0.15s ease;
+  }
+
+  .vote-btn:hover { filter: brightness(1.1); }
+  .vote-btn:active { transform: scale(0.96); }
+
+  .vote-btn:disabled {
+    background: var(--border);
+    color: var(--text-dim);
+    cursor: not-allowed;
+    filter: none;
+  }
+
+  /* ===== СТАТУС ГОЛОСОВАНИЯ ===== */
+  .status-box {
+    text-align: center;
+    padding: 16px;
+    border-radius: 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--green);
+    color: var(--green);
+    font-weight: 600;
+    margin-bottom: 20px;
+    display: none;
+  }
+
+  .status-box.show { display: block; animation: fadeIn 0.4s ease; }
+
+  /* ===== МОДАЛЬНОЕ ОКНО ПОДТВЕРЖДЕНИЯ ===== */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 6, 10, 0.75);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 16px;
+  }
+
+  .modal-overlay.show { display: flex; animation: fadeIn 0.2s ease; }
+
+  .modal {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px 24px;
+    max-width: 380px;
+    width: 100%;
+    text-align: center;
+    animation: popIn 0.25s ease;
+  }
+
+  .modal .avatar { margin: 0 auto 14px; }
+
+  .modal-text {
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+    line-height: 1.4;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+  }
+
+  .modal-actions button {
+    flex: 1;
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
+
+  .btn-confirm {
+    background: var(--green);
+    color: #0a0c11;
+  }
+  .btn-confirm:hover { filter: brightness(1.1); }
+
+  .btn-cancel {
+    background: transparent;
+    border: 1px solid var(--border) !important;
+    color: var(--text-dim);
+  }
+  .btn-cancel:hover { color: var(--text); border-color: var(--text-dim) !important; }
+
+  /* ===== БЛОК РЕЗУЛЬТАТОВ ===== */
+  .section-title {
+    font-size: 1.3rem;
+    margin: 32px 0 14px;
+    text-align: center;
+  }
+
+  .toggle-results-btn {
+    display: block;
+    margin: 24px auto;
+    padding: 12px 28px;
+    border-radius: 14px;
+    border: 1px solid var(--blue);
+    background: transparent;
+    color: var(--blue);
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+
+  .toggle-results-btn:hover {
+    background: var(--blue);
+    color: #0a0c11;
+  }
+
+  .results-box {
+    display: none;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  .results-box.show { display: block; animation: fadeIn 0.4s ease; }
+
+  .total-votes {
+    text-align: center;
+    color: var(--text-dim);
+    margin-bottom: 18px;
+    font-size: 0.95rem;
+  }
+
+  .result-row {
+    margin-bottom: 16px;
+  }
+
+  .result-row:last-child { margin-bottom: 0; }
+
+  .result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+  }
+
+  .result-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+  }
+
+  .result-name .crown { display: none; }
+  .result-row.leader .result-name .crown { display: inline; }
+  .result-row.leader .result-name { color: var(--orange); }
+
+  .result-stats {
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .bar-track {
+    width: 100%;
+    height: 14px;
+    background: #0a0c11;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .bar-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 8px;
+    background: var(--card-color, var(--green));
+    transition: width 1s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .result-row.leader .bar-fill {
+    background: linear-gradient(90deg, var(--orange), #ffce6b);
+    box-shadow: 0 0 10px var(--orange);
+  }
+
+  /* ===== ПРАВИЛА ===== */
+  .rules-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 20px 24px;
+    margin: 28px 0;
+  }
+
+  .rules-box h2 {
+    font-size: 1.1rem;
+    margin-bottom: 12px;
+    color: var(--blue);
+  }
+
+  .rules-box ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: var(--text-dim);
+    font-size: 0.92rem;
+  }
+
+  .rules-box li::before {
+    content: "🔹 ";
+  }
+
+  .note {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    margin: 20px 0;
+    line-height: 1.5;
+  }
+
+  /* ===== ФУТЕР / СБРОС ДЛЯ ТЕСТОВ ===== */
+  footer {
+    text-align: center;
+    margin-top: 30px;
+  }
+
+  .reset-btn {
+    background: none;
+    border: 1px dashed var(--border);
+    color: var(--text-dim);
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+  .reset-btn:hover { color: var(--danger); border-color: var(--danger); }
+
+  /* ===== ЭКРАН ПОБЕДИТЕЛЯ ===== */
+  .winner-overlay {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(circle at center, #14181f, #05060a 80%);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    z-index: 200;
+    text-align: center;
+    padding: 20px;
+  }
+
+  .winner-overlay.show { display: flex; }
+
+  .winner-overlay .avatar {
+    width: 130px;
+    height: 130px;
+    font-size: 4.5rem;
+    margin-bottom: 18px;
+    animation: bounce 1.6s ease-in-out infinite;
+  }
+
+  .winner-title {
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+  }
+
+  .winner-name {
+    font-size: clamp(2rem, 8vw, 3.2rem);
+    font-weight: 900;
+    background: linear-gradient(90deg, var(--orange), var(--green));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 10px;
+  }
+
+  .winner-sub {
+    color: var(--text-dim);
+    margin-bottom: 24px;
+  }
+
+  .close-winner-btn {
+    padding: 10px 24px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  #confetti-canvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 201;
+  }
+
+  /* ===== АНИМАЦИИ ===== */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-14px); }
+  }
+
+  @media (max-width: 480px) {
+    .candidates-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>Выборы президента группы "Турники"</h1>
+    <p class="subtitle">Кто достоин занять главный турник? 🏆</p>
+  </header>
+
+  <!-- Таймер до окончания голосования -->
+  <div class="timer-box">
+    <div class="timer-label">До окончания голосования</div>
+    <div class="timer-value" id="timer">—</div>
+  </div>
+
+  <!-- Статус: голос принят -->
+  <div class="status-box" id="statusBox"></div>
+
+  <!-- Карточки кандидатов -->
+  <div class="candidates-grid" id="candidatesGrid"></div>
+
+  <button class="toggle-results-btn" id="toggleResultsBtn">📊 Показать результаты</button>
+
+  <!-- Блок результатов -->
+  <div class="results-box" id="resultsBox">
+    <div class="total-votes" id="totalVotes"></div>
+    <div id="resultsList"></div>
+  </div>
+
+  <!-- Правила голосования -->
+  <div class="rules-box">
+    <h2>📜 Правила голосования</h2>
+    <ul>
+      <li>Каждый участник может проголосовать один раз</li>
+      <li>Голосование проходит честно и без обид</li>
+      <li>Победитель становится президентом группы «Турники»</li>
+    </ul>
+  </div>
+
+  <p class="note">
+    ⚠️ Голоса хранятся локально в браузере (localStorage) и не синхронизируются
+    между разными устройствами — это автономная страница без сервера.
+    Чтобы собрать голоса всех пятерых, голосование нужно проводить с одного устройства/браузера,
+    либо переносить результаты вручную.
+  </p>
+
+  <footer>
+    <button class="reset-btn" id="resetBtn">🔄 Сбросить результаты (для теста)</button>
+  </footer>
+</div>
+
+<!-- Модальное окно подтверждения голоса -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="avatar" id="modalAvatar"></div>
+    <p class="modal-text" id="modalText"></p>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="modalCancel">Отмена</button>
+      <button class="btn-confirm" id="modalConfirm">Подтвердить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Праздничный экран победителя -->
+<div class="winner-overlay" id="winnerOverlay">
+  <canvas id="confetti-canvas"></canvas>
+  <div class="winner-title">Голосование завершено</div>
+  <div class="avatar" id="winnerAvatar"></div>
+  <div class="winner-name" id="winnerName"></div>
+  <div class="winner-sub" id="winnerSub"></div>
+  <button class="close-winner-btn" id="closeWinnerBtn">Посмотреть страницу</button>
+</div>
+
+<script>
+/* =========================================================
+   НАСТРОЙКИ — можно менять
+   ========================================================= */
+
+// Дата и время окончания голосования (легко поменять)
+const VOTE_END_DATE = new Date('2026-10-15T23:59:59');
+
+// Кандидаты: id, имя, эмодзи-аватар, акцентный цвет
+const CANDIDATES = [
+  { id: 'pasha',  name: 'Паша',   emoji: '🦍', color: '#3ddc84' },
+  { id: 'misha',  name: 'Миша',   emoji: '🐻', color: '#ff9f45' },
+  { id: 'nikita', name: 'Никита', emoji: '🦁', color: '#4d9fff' },
+  { id: 'fedya',  name: 'Федя',   emoji: '🐺', color: '#ff5c8a' },
+  { id: 'egor',   name: 'Егор',   emoji: '🦅', color: '#c084fc' },
+];
+
+// Ключи localStorage
+const LS_VOTES = 'turniki_votes';
+const LS_VOTED_FLAG = 'turniki_has_voted';
+const LS_VOTED_FOR = 'turniki_voted_for';
+const LS_WINNER_SHOWN = 'turniki_winner_shown';
+
+/* =========================================================
+   СОСТОЯНИЕ / ХРАНИЛИЩЕ
+   ========================================================= */
+
+function getVotes() {
+  const raw = localStorage.getItem(LS_VOTES);
+  if (raw) return JSON.parse(raw);
+  // если голосов ещё нет — инициализируем нулями
+  const initial = {};
+  CANDIDATES.forEach(c => initial[c.id] = 0);
+  return initial;
+}
+
+function saveVotes(votes) {
+  localStorage.setItem(LS_VOTES, JSON.stringify(votes));
+}
+
+function hasVoted() {
+  return localStorage.getItem(LS_VOTED_FLAG) === 'true';
+}
+
+function getVotedFor() {
+  return localStorage.getItem(LS_VOTED_FOR);
+}
+
+function registerVote(candidateId) {
+  const votes = getVotes();
+  votes[candidateId] = (votes[candidateId] || 0) + 1;
+  saveVotes(votes);
+  localStorage.setItem(LS_VOTED_FLAG, 'true');
+  localStorage.setItem(LS_VOTED_FOR, candidateId);
+}
+
+// Сброс для тестирования — доступен и через кнопку, и через консоль: resetVoting()
+function resetVoting() {
+  localStorage.removeItem(LS_VOTES);
+  localStorage.removeItem(LS_VOTED_FLAG);
+  localStorage.removeItem(LS_VOTED_FOR);
+  localStorage.removeItem(LS_WINNER_SHOWN);
+  location.reload();
+}
+window.resetVoting = resetVoting;
+
+/* =========================================================
+   РЕНДЕР КАРТОЧЕК КАНДИДАТОВ
+   ========================================================= */
+
+const candidatesGrid = document.getElementById('candidatesGrid');
+const statusBox = document.getElementById('statusBox');
+
+function renderCandidates() {
+  candidatesGrid.innerHTML = '';
+  const votedFor = getVotedFor();
+  const userVoted = hasVoted();
+
+  CANDIDATES.forEach(c => {
+    const card = document.createElement('div');
+    card.className = 'candidate-card' + (votedFor === c.id ? ' selected' : '');
+    card.style.setProperty('--card-color', c.color);
+
+    card.innerHTML = `
+      <div class="avatar">${c.emoji}</div>
+      <div class="candidate-name">${c.name}</div>
+      <button class="vote-btn" data-id="${c.id}" ${userVoted ? 'disabled' : ''}>
+        ${votedFor === c.id ? 'Твой голос ✓' : 'Проголосовать'}
+      </button>
+    `;
+    candidatesGrid.appendChild(card);
+  });
+
+  // Статус наверху
+  if (userVoted) {
+    const votedCandidate = CANDIDATES.find(c => c.id === votedFor);
+    statusBox.textContent = `Голос принят! 💪 Ты проголосовал(а) за ${votedCandidate ? votedCandidate.name : ''}.`;
+    statusBox.classList.add('show');
+  } else {
+    statusBox.classList.remove('show');
+  }
+
+  // Навешиваем обработчики на кнопки голосования
+  document.querySelectorAll('.vote-btn').forEach(btn => {
+    btn.addEventListener('click', () => openConfirmModal(btn.dataset.id));
+  });
+}
+
+/* =========================================================
+   МОДАЛЬНОЕ ОКНО ПОДТВЕРЖДЕНИЯ
+   ========================================================= */
+
+const modalOverlay = document.getElementById('modalOverlay');
+const modalAvatar = document.getElementById('modalAvatar');
+const modalText = document.getElementById('modalText');
+const modalConfirm = document.getElementById('modalConfirm');
+const modalCancel = document.getElementById('modalCancel');
+
+let pendingCandidateId = null;
+
+function openConfirmModal(candidateId) {
+  if (hasVoted() || isVotingClosed()) return;
+  const candidate = CANDIDATES.find(c => c.id === candidateId);
+  pendingCandidateId = candidateId;
+
+  modalAvatar.textContent = candidate.emoji;
+  modalAvatar.style.setProperty('--card-color', candidate.color);
+  modalText.textContent = `Ты уверен, что хочешь отдать свой голос за ${candidate.name}?`;
+
+  modalOverlay.classList.add('show');
+}
+
+function closeModal() {
+  modalOverlay.classList.remove('show');
+  pendingCandidateId = null;
+}
+
+modalCancel.addEventListener('click', closeModal);
+modalOverlay.addEventListener('click', (e) => {
+  if (e.target === modalOverlay) closeModal();
+});
+
+modalConfirm.addEventListener('click', () => {
+  if (!pendingCandidateId) return;
+  registerVote(pendingCandidateId);
+  closeModal();
+  renderCandidates();
+  renderResults();
+});
+
+/* =========================================================
+   РЕЗУЛЬТАТЫ
+   ========================================================= */
+
+const resultsBox = document.getElementById('resultsBox');
+const resultsList = document.getElementById('resultsList');
+const totalVotesEl = document.getElementById('totalVotes');
+const toggleResultsBtn = document.getElementById('toggleResultsBtn');
+
+function renderResults() {
+  const votes = getVotes();
+  const total = Object.values(votes).reduce((a, b) => a + b, 0);
+  const maxVotes = Math.max(...Object.values(votes));
+
+  totalVotesEl.textContent = total === 0
+    ? 'Пока никто не проголосовал'
+    : `Всего проголосовало: ${total} из ${CANDIDATES.length}`;
+
+  // Сортируем по убыванию голосов для наглядности
+  const sorted = [...CANDIDATES].sort((a, b) => (votes[b.id] || 0) - (votes[a.id] || 0));
+
+  resultsList.innerHTML = '';
+  sorted.forEach(c => {
+    const count = votes[c.id] || 0;
+    const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+    const isLeader = total > 0 && count === maxVotes && maxVotes > 0;
+
+    const row = document.createElement('div');
+    row.className = 'result-row' + (isLeader ? ' leader' : '');
+    row.innerHTML = `
+      <div class="result-header">
+        <span class="result-name">
+          <span class="crown">👑</span>
+          ${c.emoji} ${c.name}
+        </span>
+        <span class="result-stats">${count} голос(ов) · ${pct}%</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" style="--card-color:${c.color}" data-pct="${pct}"></div>
+      </div>
+    `;
+    resultsList.appendChild(row);
+  });
+
+  // Анимация прогресс-баров (запускаем после вставки в DOM)
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.bar-fill').forEach(bar => {
+      bar.style.width = bar.dataset.pct + '%';
+    });
+  });
+}
+
+toggleResultsBtn.addEventListener('click', () => {
+  const isShown = resultsBox.classList.toggle('show');
+  toggleResultsBtn.textContent = isShown ? '📊 Скрыть результаты' : '📊 Показать результаты';
+  if (isShown) renderResults();
+});
+
+/* =========================================================
+   ТАЙМЕР ДО ОКОНЧАНИЯ ГОЛОСОВАНИЯ
+   ========================================================= */
+
+const timerEl = document.getElementById('timer');
+
+function isVotingClosed() {
+  return new Date() >= VOTE_END_DATE;
+}
+
+function updateTimer() {
+  const now = new Date();
+  const diff = VOTE_END_DATE - now;
+
+  if (diff <= 0) {
+    timerEl.textContent = 'Голосование завершено';
+    timerEl.classList.add('ended');
+    maybeShowWinnerScreen();
+    return;
+  }
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((diff / (1000 * 60)) % 60);
+  const seconds = Math.floor((diff / 1000) % 60);
+
+  timerEl.textContent = `${days}д ${hours}ч ${minutes}м ${seconds}с`;
+}
+
+/* =========================================================
+   ЭКРАН ПОБЕДИТЕЛЯ + КОНФЕТТИ
+   ========================================================= */
+
+const winnerOverlay = document.getElementById('winnerOverlay');
+const winnerAvatar = document.getElementById('winnerAvatar');
+const winnerName = document.getElementById('winnerName');
+const winnerSub = document.getElementById('winnerSub');
+const closeWinnerBtn = document.getElementById('closeWinnerBtn');
+
+function maybeShowWinnerScreen() {
+  if (!isVotingClosed()) return;
+  // Показываем экран победителя один раз за сеанс, чтобы не мешать пользователю
+  if (sessionStorage.getItem('winner_screen_seen') === 'true') return;
+
+  const votes = getVotes();
+  const total = Object.values(votes).reduce((a, b) => a + b, 0);
+  if (total === 0) return; // некого объявлять победителем
+
+  const maxVotes = Math.max(...Object.values(votes));
+  const winners = CANDIDATES.filter(c => (votes[c.id] || 0) === maxVotes);
+  const winner = winners[0]; // при ничьей — первый по списку
+
+  winnerAvatar.textContent = winner.emoji;
+  winnerAvatar.style.setProperty('--card-color', winner.color);
+  winnerName.textContent = winner.name;
+  winnerSub.textContent = winners.length > 1
+    ? `Ничья между ${winners.map(w => w.name).join(', ')} — по регламенту первым указан ${winner.name} 🏆`
+    : `Новый президент группы «Турники»! 🏆`;
+
+  winnerOverlay.classList.add('show');
+  sessionStorage.setItem('winner_screen_seen', 'true');
+  launchConfetti();
+}
+
+closeWinnerBtn.addEventListener('click', () => {
+  winnerOverlay.classList.remove('show');
+});
+
+// --- Простая канвас-анимация конфетти без внешних библиотек ---
+const confettiCanvas = document.getElementById('confetti-canvas');
+const ctx = confettiCanvas.getContext('2d');
+let confettiParticles = [];
+let confettiAnimationId = null;
+
+function resizeCanvas() {
+  confettiCanvas.width = window.innerWidth;
+  confettiCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function launchConfetti() {
+  const colors = ['#3ddc84', '#ff9f45', '#4d9fff', '#ff5c8a', '#c084fc', '#ffce6b'];
+  confettiParticles = Array.from({ length: 160 }, () => ({
+    x: Math.random() * confettiCanvas.width,
+    y: -20 - Math.random() * confettiCanvas.height * 0.5,
+    size: 6 + Math.random() * 6,
+    color: colors[Math.floor(Math.random() * colors.length)],
+    speedY: 2 + Math.random() * 3,
+    speedX: -1.5 + Math.random() * 3,
+    rotation: Math.random() * 360,
+    rotationSpeed: -6 + Math.random() * 12,
+  }));
+
+  if (confettiAnimationId) cancelAnimationFrame(confettiAnimationId);
+  animateConfetti();
+}
+
+function animateConfetti() {
+  ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+
+  let stillFalling = false;
+  confettiParticles.forEach(p => {
+    p.x += p.speedX;
+    p.y += p.speedY;
+    p.rotation += p.rotationSpeed;
+
+    if (p.y < confettiCanvas.height + 20) stillFalling = true;
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate((p.rotation * Math.PI) / 180);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+    ctx.restore();
+  });
+
+  if (stillFalling && winnerOverlay.classList.contains('show')) {
+    confettiAnimationId = requestAnimationFrame(animateConfetti);
+  } else {
+    ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+  }
+}
+
+/* =========================================================
+   СБРОС ДЛЯ ТЕСТИРОВАНИЯ
+   ========================================================= */
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (confirm('Точно сбросить все результаты голосования? Это действие необратимо.')) {
+    resetVoting();
+  }
+});
+
+/* =========================================================
+   ИНИЦИАЛИЗАЦИЯ
+   ========================================================= */
+
+renderCandidates();
+renderResults();
+updateTimer();
+setInterval(updateTimer, 1000);
+</script>
+
+</body>
+</html>
